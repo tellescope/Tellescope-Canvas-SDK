@@ -224,8 +224,71 @@ def get_paginated_resources(resource_type, limit=100):
 ```
 
 ### Filtering and Searching
+
+#### mdbFilter - MongoDB Query Filtering (Most Flexible)
+**IMPORTANT**: Both singular and plural GET endpoints accept an `mdbFilter` parameter that accepts JSON-encoded MongoDB query syntax. This is the **most flexible way** to filter data and should be the preferred method for complex queries.
+
 ```python
-# Time-based filtering
+import json
+
+# MongoDB-style filtering with mdbFilter (RECOMMENDED)
+def get_resources_with_mongodb_filter(resource_type, mongodb_query):
+    """
+    Use MongoDB query syntax for maximum flexibility
+    
+    MongoDB query examples:
+    - {"email": "john@example.com"} - Exact email match
+    - {"age": {"$gte": 18, "$lt": 65}} - Age between 18 and 64
+    - {"tags": {"$in": ["vip", "priority"]}} - Has any of these tags
+    - {"$and": [{"status": "active"}, {"lastLogin": {"$exists": true}}]} - Multiple conditions
+    - {"createdAt": {"$gte": "2024-01-01T00:00:00Z"}} - Created after date
+    - {"fname": {"$exists": true}} - Has first name field
+    """
+    params = {
+        "mdbFilter": json.dumps(mongodb_query)
+    }
+    return get_resources(resource_type, params)
+
+# Examples of MongoDB filtering for common scenarios
+def get_endusers_by_email(email):
+    """Find enduser by exact email match"""
+    mongodb_query = {"email": email}
+    return get_resources_with_mongodb_filter("endusers", mongodb_query)
+
+def get_active_endusers_with_tags(tags_list):
+    """Find active endusers with specific tags"""
+    mongodb_query = {
+        "$and": [
+            {"tags": {"$in": tags_list}},
+            {"$or": [
+                {"status": {"$ne": "inactive"}},
+                {"status": {"$exists": False}}
+            ]}
+        ]
+    }
+    return get_resources_with_mongodb_filter("endusers", mongodb_query)
+
+def get_endusers_by_age_range(min_age, max_age):
+    """Find endusers within an age range"""
+    mongodb_query = {
+        "age": {
+            "$gte": min_age,
+            "$lte": max_age
+        }
+    }
+    return get_resources_with_mongodb_filter("endusers", mongodb_query)
+
+def get_recent_communications(resource_type, days_back=7):
+    """Get communications from the last N days using MongoDB date filtering"""
+    from datetime import datetime, timedelta
+    
+    cutoff_date = (datetime.now() - timedelta(days=days_back)).isoformat()
+    mongodb_query = {
+        "createdAt": {"$gte": cutoff_date}
+    }
+    return get_resources_with_mongodb_filter(resource_type, mongodb_query)
+
+# Traditional parameter-based filtering (less flexible)
 def get_recent_resources(resource_type, days_back=7):
     from datetime import datetime, timedelta
     
@@ -237,10 +300,11 @@ def get_recent_resources(resource_type, days_back=7):
 # Custom filters
 def get_filtered_resources(resource_type, filters):
     """
-    Common filter parameters:
+    Common filter parameters (less flexible than mdbFilter):
     - fromUpdated, from, to: Date filtering
     - limit: Page size (max 100)
     - lastId: Pagination cursor
+    - mdbFilter: JSON-encoded MongoDB query (MOST FLEXIBLE)
     """
     return get_resources(resource_type, filters)
 ```
@@ -486,17 +550,24 @@ def create_enduser(**patient_data):
     return create_resource("enduser", patient_data)
 
 # Search patients by various criteria
-def search_endusers(search_params):
+def search_endusers(search_params=None, mongodb_filter=None):
     """
-    Common search parameters:
+    Search endusers using traditional parameters or MongoDB filtering
+    
+    For simple searches, use search_params:
     - email: Exact email match
     - phone: Phone number search
     - fname, lname: Name search
     - externalId: External system ID
     - tags: Filter by tags
     - assignedTo: Filter by assigned user IDs
+    
+    For complex searches, use mongodb_filter (RECOMMENDED):
+    - mongodb_filter: Dict with MongoDB query syntax
     """
-    return get_resources("endusers", search_params)
+    if mongodb_filter:
+        return get_resources_with_mongodb_filter("endusers", mongodb_filter)
+    return get_resources("endusers", search_params or {})
 
 # Update patient information
 def update_enduser(enduser_id, updates):
@@ -533,8 +604,8 @@ def sync_canvas_patient_to_tellescope(canvas_patient):
         "tags": ["canvas-patient"]
     }
     
-    # Check if enduser already exists by Canvas ID
-    existing = search_endusers({"externalId": str(canvas_patient.id)})
+    # Check if enduser already exists by Canvas ID (using mdbFilter for exact match)
+    existing = search_endusers(mongodb_filter={"externalId": str(canvas_patient.id)})
     
     if existing.get("data"):
         # Update existing enduser
@@ -548,7 +619,7 @@ def find_tellescope_patient_by_canvas_id(canvas_patient_id):
     """
     Find Tellescope enduser by Canvas patient ID
     """
-    result = search_endusers({"externalId": str(canvas_patient_id)})
+    result = search_endusers(mongodb_filter={"externalId": str(canvas_patient_id)})
     return result.get("data", [{}])[0] if result.get("data") else None
 ```
 
@@ -705,12 +776,26 @@ def validate_enduser_data(enduser_data):
 ### Best Practices for AI Assistants
 
 1. **Always validate credentials first** - Call `validate_tellescope_credentials()` at the start of protocols
-2. **Use externalId for integration** - Store Canvas patient IDs in Tellescope's `externalId` field and set the source to "Canvas" when creating new patients
-3. **Handle rate limits gracefully** - Implement retry logic with delays
-4. **Validate data before API calls** - Check required fields and formats
-5. **Use pagination for large datasets** - Don't attempt to fetch all records at once
-6. **Implement proper error handling** - Return user-friendly Canvas effects for errors
-7. **Test with staging environment** - Use staging API URL for development and testing
+2. **Use mdbFilter for complex queries** - When filtering data, prefer `mdbFilter` with MongoDB query syntax over traditional parameters for maximum flexibility
+3. **Use externalId for integration** - Store Canvas patient IDs in Tellescope's `externalId` field and set the source to "Canvas" when creating new patients
+4. **Handle rate limits gracefully** - Implement retry logic with delays
+5. **Validate data before API calls** - Check required fields and formats
+6. **Use pagination for large datasets** - Don't attempt to fetch all records at once
+7. **Implement proper error handling** - Return user-friendly Canvas effects for errors
+8. **Test with staging environment** - Use staging API URL for development and testing
+
+#### MongoDB Query Reference for AI Assistants
+When using `mdbFilter`, these MongoDB operators are commonly useful:
+- `{"field": "value"}` - Exact match
+- `{"field": {"$in": ["val1", "val2"]}}` - Field matches any value in array
+- `{"field": {"$ne": "value"}}` - Not equal
+- `{"field": {"$exists": true}}` - Field exists
+- `{"field": {"$gte": value}}` - Greater than or equal
+- `{"field": {"$lte": value}}` - Less than or equal
+- `{"$and": [condition1, condition2]}` - Multiple conditions must be true
+- `{"$or": [condition1, condition2]}` - At least one condition must be true
+
+**IMPORTANT**: Always use `mdbFilter` with `json.dumps()` to properly encode the MongoDB query as JSON.
 
 ### Canvas Integration Checklist
 ```python
