@@ -98,39 +98,28 @@ if not TELLESCOPE_API_KEY:
 - **Staging**: `https://staging-api.tellescope.com/v1`
 
 ### Common Endpoints
-| Resource | Endpoint | Description |
-|----------|----------|-------------|
-| Endusers | `/endusers` | Patient/client records |
-| Users | `/users` | Staff/team member accounts |
-| Emails | `/emails` | Email communication records |
-| SMS Messages | `/sms-messages` | SMS communication records |
-| Chat Rooms | `/chat-rooms` | Group chat functionality |
-| Chat Messages | `/chats` | Individual chat messages |
-| Message Templates | `/templates` | Email/SMS template library |
-| Files | `/files` | File attachments and documents |
-| Tickets | `/tickets` | Task/issue tracking |
-| Notes | `/notes` | Patient notes and annotations |
-| Forms | `/forms` | Data collection forms |
-| Form Fields | `/form-fields` | Individual form field definitions |
-| Form Responses | `/form-responses` | Submitted form data |
-| Calendar Events | `/calendar-events` | Appointments and meetings |
-| Calendar Event Templates | `/calendar-event-templates` | Appointment templates |
-| Journeys | `/journeys` | Patient journey/workflow definitions |
-| Automation Steps | `/automation-steps` | Workflow automation rules |
-| Automated Actions | `/automated-actions` | Scheduled/triggered actions |
-| Automation Triggers | `/automation-triggers` | Event-based automation triggers |
-| Organizations | `/organizations` | Organization/practice settings |
-| Integrations | `/integrations` | Third-party integration configs |
-| Products | `/products` | Billing/payment products |
-| Purchases | `/purchases` | Payment transactions |
-| Phone Calls | `/phone-calls` | Call logs and recordings |
-| Enduser Medications | `/enduser-medications` | Patient medication records |
-| Enduser Observations | `/enduser-observations` | Vital signs and measurements |
-| Managed Content Records | `/managed-content-records` | Educational content library |
+*Note: GET requests for lists use plural endpoints (e.g., `/endusers`). POST, PATCH, DELETE, and single GET requests use singular endpoints (e.g., `/enduser`, `/enduser/{id}`).*
+
+| Resource | List Endpoint (GET) | Single/Modify Endpoints | Description |
+|----------|---------------------|-------------------------|-------------|
+| Endusers | `/endusers` | `/enduser`, `/enduser/{id}` | Patient/client records |
+| Users | `/users` | `/user`, `/user/{id}` | Staff/team member accounts |
+| Emails | `/emails` | `/email`, `/email/{id}` | Email communication records |
+| SMS Messages | `/sms-messages` | `/sms-message`, `/sms-message/{id}` | SMS communication records |
+| Chat Rooms | `/chat-rooms` | `/chat-room`, `/chat-room/{id}` | Group chat functionality |
+| Chat Messages | `/chats` | `/chat`, `/chat/{id}` | Individual chat messages |
+| Message Templates | `/templates` | `/template`, `/template/{id}` | Email/SMS template library |
+| Files | `/files` | `/file`, `/file/{id}` | File attachments and documents |
+| Tickets | `/tickets` | `/ticket`, `/ticket/{id}` | Task/issue tracking |
+| Notes | `/notes` | `/note`, `/note/{id}` | Patient notes and annotations |
+| Forms | `/forms` | `/form`, `/form/{id}` | Data collection forms |
+| Form Fields | `/form-fields` | `/form-field`, `/form-field/{id}` | Individual form field definitions |
+| Form Responses | `/form-responses` | `/form-response`, `/form-response/{id}` | Submitted form data |
+| Calendar Events | `/calendar-events` | `/calendar-event`, `/calendar-event/{id}` | Appointments and meetings |
 
 ### Standard CRUD Operations
 ```python
-# CREATE - POST /{resource}
+# CREATE - POST /{resource} (singular)
 def create_resource(resource_type, data):
     try:
         response = requests.post(
@@ -146,7 +135,7 @@ def create_resource(resource_type, data):
     except requests.exceptions.RequestException as e:
         raise Exception(f"Tellescope API error: {str(e)}")
 
-# READ - GET /{resource} or GET /{resource}/{id}
+# READ - GET /{resources} (plural) for lists or GET /{resource}/{id} (singular) for single
 def get_resources(resource_type, filters=None):
     try:
         response = requests.get(
@@ -164,8 +153,10 @@ def get_resources(resource_type, filters=None):
 
 def get_resource_by_id(resource_type, resource_id):
     try:
+        # Use singular form for single resource retrieval
+        singular_resource = resource_type.rstrip('s') if resource_type.endswith('s') else resource_type
         response = requests.get(
-            f"{TELLESCOPE_API_URL}/{resource_type}/{resource_id}",
+            f"{TELLESCOPE_API_URL}/{singular_resource}/{resource_id}",
             headers={
                 "Authorization": f"API_KEY {TELLESCOPE_API_KEY}",
                 "Content-Type": "application/json"
@@ -176,10 +167,12 @@ def get_resource_by_id(resource_type, resource_id):
     except requests.exceptions.RequestException as e:
         raise Exception(f"Tellescope API error: {str(e)}")
 
-# UPDATE - PATCH /{resource}/{id}
+# UPDATE - PATCH /{resource}/{id} (singular)
 def update_resource(resource_type, resource_id, updates):
+    # Use singular form for updates
+    singular_resource = resource_type.rstrip('s') if resource_type.endswith('s') else resource_type
     response = requests.patch(
-        f"{TELLESCOPE_API_URL}/{resource_type}/{resource_id}",
+        f"{TELLESCOPE_API_URL}/{singular_resource}/{resource_id}",
         headers={
             "Authorization": f"API_KEY {TELLESCOPE_API_KEY}",
             "Content-Type": "application/json"
@@ -189,10 +182,12 @@ def update_resource(resource_type, resource_id, updates):
     response.raise_for_status()
     return response.json()
 
-# DELETE - DELETE /{resource}/{id}
+# DELETE - DELETE /{resource}/{id} (singular)
 def delete_resource(resource_type, resource_id):
+    # Use singular form for deletion
+    singular_resource = resource_type.rstrip('s') if resource_type.endswith('s') else resource_type
     response = requests.delete(
-        f"{TELLESCOPE_API_URL}/{resource_type}/{resource_id}",
+        f"{TELLESCOPE_API_URL}/{singular_resource}/{resource_id}",
         headers={
             "Authorization": f"API_KEY {TELLESCOPE_API_KEY}",
             "Content-Type": "application/json"
@@ -488,7 +483,7 @@ def create_enduser(**patient_data):
     - source: Data source (e.g., "Canvas")
     - tags: Array of tags
     """
-    return create_resource("endusers", patient_data)
+    return create_resource("enduser", patient_data)
 
 # Search patients by various criteria
 def search_endusers(search_params):
@@ -505,7 +500,7 @@ def search_endusers(search_params):
 
 # Update patient information
 def update_enduser(enduser_id, updates):
-    return update_resource("endusers", enduser_id, updates)
+    return update_resource("enduser", enduser_id, updates)
 ```
 
 ### Canvas Integration Patterns
@@ -571,7 +566,7 @@ def send_email_to_enduser(enduser_id, subject, text_content, html_content=None, 
         "HTMLContent": html_content,
         "inbound": False
     }
-    return create_resource("emails", email_data)
+    return create_resource("email", email_data)
 
 # Send an SMS to a patient
 def send_sms_to_enduser(enduser_id, message, user_id=None):
@@ -582,7 +577,7 @@ def send_sms_to_enduser(enduser_id, message, user_id=None):
         "inbound": False,
         "newThread": True
     }
-    return create_resource("sms_messages", sms_data)
+    return create_resource("sms-message", sms_data)
 
 # Create a ticket for follow-up
 def create_ticket_for_enduser(enduser_id, title, message=None, user_id=None):
@@ -592,7 +587,7 @@ def create_ticket_for_enduser(enduser_id, title, message=None, user_id=None):
         "message": message,
         "owner": user_id
     }
-    return create_resource("tickets", ticket_data)
+    return create_resource("ticket", ticket_data)
 
 # Get patient's communication history
 def get_enduser_communications(enduser_id, limit=50):
@@ -606,7 +601,7 @@ def get_enduser_communications(enduser_id, limit=50):
     })
     
     # Get recent SMS messages
-    sms_messages = get_resources("sms_messages", {
+    sms_messages = get_resources("sms-messages", {
         "enduserId": enduser_id,
         "limit": limit
     })
@@ -642,6 +637,10 @@ def safe_tellescope_request(func, *args, **kwargs):
         raise ConnectionError(f"Network error connecting to Tellescope: {str(e)}")
 
 # Usage with error handling
+def get_enduser(enduser_id):
+    """Get a single enduser by ID"""
+    return get_resource_by_id("enduser", enduser_id)
+
 def get_enduser_safely(enduser_id):
     try:
         return safe_tellescope_request(get_enduser, enduser_id)
