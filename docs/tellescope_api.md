@@ -103,33 +103,30 @@ if not TELLESCOPE_API_KEY:
 | Endusers | `/endusers` | Patient/client records |
 | Users | `/users` | Staff/team member accounts |
 | Emails | `/emails` | Email communication records |
-| SMS Messages | `/sms_messages` | SMS communication records |
-| Chat Rooms | `/chat_rooms` | Group chat functionality |
+| SMS Messages | `/sms-messages` | SMS communication records |
+| Chat Rooms | `/chat-rooms` | Group chat functionality |
 | Chat Messages | `/chats` | Individual chat messages |
 | Message Templates | `/templates` | Email/SMS template library |
 | Files | `/files` | File attachments and documents |
 | Tickets | `/tickets` | Task/issue tracking |
 | Notes | `/notes` | Patient notes and annotations |
 | Forms | `/forms` | Data collection forms |
-| Form Fields | `/form_fields` | Individual form field definitions |
-| Form Responses | `/form_responses` | Submitted form data |
-| Calendar Events | `/calendar_events` | Appointments and meetings |
-| Calendar Event Templates | `/calendar_event_templates` | Appointment templates |
+| Form Fields | `/form-fields` | Individual form field definitions |
+| Form Responses | `/form-responses` | Submitted form data |
+| Calendar Events | `/calendar-events` | Appointments and meetings |
+| Calendar Event Templates | `/calendar-event-templates` | Appointment templates |
 | Journeys | `/journeys` | Patient journey/workflow definitions |
-| Automation Steps | `/automation_steps` | Workflow automation rules |
-| Automated Actions | `/automated_actions` | Scheduled/triggered actions |
-| Automation Triggers | `/automation_triggers` | Event-based automation triggers |
+| Automation Steps | `/automation-steps` | Workflow automation rules |
+| Automated Actions | `/automated-actions` | Scheduled/triggered actions |
+| Automation Triggers | `/automation-triggers` | Event-based automation triggers |
 | Organizations | `/organizations` | Organization/practice settings |
 | Integrations | `/integrations` | Third-party integration configs |
 | Products | `/products` | Billing/payment products |
 | Purchases | `/purchases` | Payment transactions |
-| Phone Calls | `/phone_calls` | Call logs and recordings |
-| Enduser Medications | `/enduser_medications` | Patient medication records |
-| Enduser Observations | `/enduser_observations` | Vital signs and measurements |
-| Managed Content Records | `/managed_content_records` | Educational content library |
-| Care Plans | `/care_plans` | Patient care plan management |
-| Webhooks | `/webhooks` | Webhook configuration |
-| API Keys | `/api_keys` | API access key management |
+| Phone Calls | `/phone-calls` | Call logs and recordings |
+| Enduser Medications | `/enduser-medications` | Patient medication records |
+| Enduser Observations | `/enduser-observations` | Vital signs and measurements |
+| Managed Content Records | `/managed-content-records` | Educational content library |
 
 ### Standard CRUD Operations
 ```python
@@ -387,8 +384,8 @@ SMS communication records.
 - `inbound`: Boolean indicating direction
 - `delivered`: Boolean delivery status
 - `userId`: Sending user ID
-- `phoneNumber`: From phone number
-- `enduserPhoneNumber`: To phone number
+- `phoneNumber`: The Tellescope phone number used
+- `enduserPhoneNumber`: The phone number of the Enduser
 - `timestamp`: Message timestamp
 - `readBy`: Object tracking read status
 - `ticketIds`: Associated ticket IDs
@@ -406,7 +403,7 @@ Task and issue tracking records.
 - `closedAt`: Closure timestamp
 - `closedBy`: User who closed the ticket
 - `closedForReason`: Reason for closure
-- `dueDateInMS`: Due date in milliseconds
+- `dueDateInMS`: Due date in milliseconds since Unix epoch
 - `owner`: Assigned owner user ID
 - `priority`: Priority level (number)
 - `type`: Ticket type
@@ -438,7 +435,7 @@ Submitted form data.
 - `formTitle`: Title of the form
 
 **Key Fields:**
-- `responses`: Array of form field responses
+- `responses`: Array of answers
 - `submittedAt`: Submission timestamp
 - `submittedBy`: User who submitted
 - `publicSubmit`: Boolean for public submissions
@@ -450,7 +447,7 @@ Appointments and scheduled events.
 
 **Required Fields:**
 - `title`: Event title
-- `startTimeInMS`: Start time in milliseconds
+- `startTimeInMS`: Start time in milliseconds since Unix epoch
 - `durationInMinutes`: Duration in minutes
 
 **Key Fields:**
@@ -470,7 +467,6 @@ Most Tellescope resources follow similar patterns:
 **Relationship Fields:**
 - `enduserId`: References an enduser (patient)
 - `userId`: References a user (staff member)
-- `organizationIds`: Array of organization IDs for multi-org access
 
 ## Enduser (Patient) Management
 
