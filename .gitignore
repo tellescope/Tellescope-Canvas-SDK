@@ -66,6 +66,3 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
-
-# Ignore manifest if generated
-CANVAS_MANIFEST.json
