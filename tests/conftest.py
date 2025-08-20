@@ -5,6 +5,10 @@ Pytest configuration and shared fixtures for Tellescope Canvas SDK tests
 import pytest
 import os
 from unittest.mock import Mock
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 @pytest.fixture
@@ -21,29 +25,9 @@ def mock_tellescope_api():
 
 @pytest.fixture
 def test_env_vars():
-    """Test environment variables"""
+    """Test environment variables loaded from .env file"""
     return {
-        "TELLESCOPE_API_KEY": "test_api_key",
-        "CANVAS_API_KEY": "test_canvas_key",
-        # Add other test env vars as needed
+        "TELLESCOPE_API_KEY": os.getenv("TELLESCOPE_API_KEY"),
+        "TELLESCOPE_API_URL": os.getenv("TELLESCOPE_API_URL"),
+        "CANVAS_API_KEY": os.getenv("CANVAS_API_KEY"),
     }
-
-
-@pytest.fixture(autouse=True)
-def setup_test_env(test_env_vars):
-    """Automatically set up test environment variables"""
-    original_env = {}
-    
-    # Save original values and set test values
-    for key, value in test_env_vars.items():
-        original_env[key] = os.environ.get(key)
-        os.environ[key] = value
-    
-    yield
-    
-    # Restore original values
-    for key in test_env_vars:
-        if original_env[key] is None:
-            os.environ.pop(key, None)
-        else:
-            os.environ[key] = original_env[key]
