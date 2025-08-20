@@ -102,14 +102,34 @@ if not TELLESCOPE_API_KEY:
 |----------|----------|-------------|
 | Endusers | `/endusers` | Patient/client records |
 | Users | `/users` | Staff/team member accounts |
-| Messages | `/messages` | Secure messaging |
-| SMSMessages | `/sms-messages` | SMS communication records |
 | Emails | `/emails` | Email communication records |
-| Tasks | `/tasks` | Action items and to-dos |
-| Appointments | `/appointments` | Scheduled meetings/calls |
+| SMS Messages | `/sms_messages` | SMS communication records |
+| Chat Rooms | `/chat_rooms` | Group chat functionality |
+| Chat Messages | `/chats` | Individual chat messages |
+| Message Templates | `/templates` | Email/SMS template library |
+| Files | `/files` | File attachments and documents |
+| Tickets | `/tickets` | Task/issue tracking |
+| Notes | `/notes` | Patient notes and annotations |
 | Forms | `/forms` | Data collection forms |
-| ChatRooms | `/chat-rooms` | Group chat functionality |
-| Calls | `/calls` | Phone call records |
+| Form Fields | `/form_fields` | Individual form field definitions |
+| Form Responses | `/form_responses` | Submitted form data |
+| Calendar Events | `/calendar_events` | Appointments and meetings |
+| Calendar Event Templates | `/calendar_event_templates` | Appointment templates |
+| Journeys | `/journeys` | Patient journey/workflow definitions |
+| Automation Steps | `/automation_steps` | Workflow automation rules |
+| Automated Actions | `/automated_actions` | Scheduled/triggered actions |
+| Automation Triggers | `/automation_triggers` | Event-based automation triggers |
+| Organizations | `/organizations` | Organization/practice settings |
+| Integrations | `/integrations` | Third-party integration configs |
+| Products | `/products` | Billing/payment products |
+| Purchases | `/purchases` | Payment transactions |
+| Phone Calls | `/phone_calls` | Call logs and recordings |
+| Enduser Medications | `/enduser_medications` | Patient medication records |
+| Enduser Observations | `/enduser_observations` | Vital signs and measurements |
+| Managed Content Records | `/managed_content_records` | Educational content library |
+| Care Plans | `/care_plans` | Patient care plan management |
+| Webhooks | `/webhooks` | Webhook configuration |
+| API Keys | `/api_keys` | API access key management |
 
 ### Standard CRUD Operations
 ```python
@@ -200,58 +220,207 @@ def get_filtered_resources(resource_type, filters):
 
 ## Core Data Models
 
+**Standard Fields (shared across all models):**
+- `id`: Unique identifier (string)
+- `createdAt`: ISO timestamp of creation
+- `updatedAt`: ISO timestamp of last update
+- `businessId`: Associated tenant within Tellescope
+- `creator`: ID of user who created the record
+
 ### Endusers (Patients)
-The primary patient/client record in Tellescope.
+Primary patient/client records in Tellescope.
+
+**Required Fields:**
+- No required fields (email, fname, lname are common but not technically required)
 
 **Key Fields:**
-- `id`: Unique identifier
-- `email`: Email address (required)
-- `fname`: First name (required)
-- `lname`: Last name (required)
-- `phone`: Phone number
-- `dateOfBirth`: Date of birth (YYYY-MM-DD format)
-- `sex`: Gender ('M' or 'F')
-- `externalId`: External system identifier (useful for Canvas integration)
-- `tags`: Array of string tags for categorization
-- `createdAt`: Creation timestamp
-- `updatedAt`: Last update timestamp
-
-### Users
-Represents team members and staff accounts.
-
-**Key Fields:**
-- `id`: Unique identifier
 - `email`: Email address
 - `fname`: First name
 - `lname`: Last name
-- `role`: User role/permissions level
-- `organizationId`: Associated organization
+- `phone`: Primary phone number
+- `alternatePhones`: Array of alternate phone numbers
+- `landline`: Landline phone number
+- `dateOfBirth`: Date of birth (MM-DD-YYYY format)
+- `gender`: Gender ('Male', 'Female', 'Other', 'Unknown')
+- `genderIdentity`: Gender identity (separate from biological gender)
+- `externalId`: External system identifier (useful for Canvas integration)
+- `source`: Data source (e.g., "Canvas")
+- `tags`: Array of string tags for categorization
+- `fields`: Custom fields (key-value pairs)
+- `assignedTo`: Array of user IDs assigned to this patient
+- `primaryAssignee`: Primary assigned user ID
+- `timezone`: Patient's timezone
+- `preference`: Communication preference ('email', 'sms', 'call', 'chat')
+- `emailConsent`: Boolean for email communication consent
+- `phoneConsent`: Boolean for phone/SMS communication consent
+- `journeys`: Object mapping journey IDs to current state
+- `relationships`: Array of patient relationships
+- `insurance`: Primary insurance information
+- `insuranceSecondary`: Secondary insurance information
+- `accessTags`: Array of access control tags
+
+### Users (Staff)
+Team member and staff accounts.
+
+**Required Fields:**
+- `email`: Email address (required)
+- `verifiedEmail`: Boolean indicating email verification status
+
+**Key Fields:**
+- `fname`: First name
+- `lname`: Last name
+- `displayName`: Public display name
+- `internalDisplayName`: Internal display name
+- `phone`: Phone number
+- `roles`: Array of user roles
+- `timezone`: User's timezone
+- `avatar`: Avatar image URL
+- `emailSignature`: Email signature
+- `twilioNumber`: Assigned phone number
+- `fromEmail`: Default from email address
+- `specialties`: Array of medical specialties
+- `bio`: User biography
+- `NPI`: National Provider Identifier
+- `DEA`: DEA number
+- `externalId`: External system identifier
+
+### Emails
+Email communication records.
+
+**Required Fields:**
+- `enduserId`: Associated patient ID (can be null)
+- `subject`: Email subject line
+- `textContent`: Plain text email content
+
+**Key Fields:**
+- `userId`: Sending user ID
+- `HTMLContent`: HTML email content
+- `inbound`: Boolean indicating inbound vs outbound
+- `delivered`: Boolean delivery status
+- `threadId`: Email thread identifier
+- `source`: Source email address
+- `timestamp`: Email timestamp
+- `readBy`: Object tracking read status by user
+- `ticketIds`: Associated ticket IDs
+- `tags`: Email tags
+- `attachments`: File attachments
+
+### SMS Messages
+SMS communication records.
+
+**Required Fields:**
+- `enduserId`: Associated patient ID
+- `message`: SMS message text
+
+**Key Fields:**
+- `inbound`: Boolean indicating direction
+- `delivered`: Boolean delivery status
+- `userId`: Sending user ID
+- `phoneNumber`: From phone number
+- `enduserPhoneNumber`: To phone number
+- `timestamp`: Message timestamp
+- `readBy`: Object tracking read status
+- `ticketIds`: Associated ticket IDs
+- `tags`: Message tags
+
+### Tickets
+Task and issue tracking records.
+
+**Required Fields:**
+- `title`: Ticket title
+
+**Key Fields:**
+- `enduserId`: Associated patient ID
+- `message`: Ticket description
+- `closedAt`: Closure timestamp
+- `closedBy`: User who closed the ticket
+- `closedForReason`: Reason for closure
+- `dueDateInMS`: Due date in milliseconds
+- `owner`: Assigned owner user ID
+- `priority`: Priority level (number)
+- `type`: Ticket type
+- `stage`: Current stage
+- `actions`: Array of ticket actions
+- `tags`: Ticket tags
+
+### Forms
+Data collection form definitions.
+
+**Required Fields:**
+- `title`: Form title
+
+**Key Fields:**
+- `description`: Form description
+- `allowPublicURL`: Boolean for public access
+- `type`: Form type ('note' or 'enduserFacing')
+- `scoring`: Array of scoring configurations
+- `customGreeting`: Custom greeting message
+- `thanksMessage`: Thank you message after submission
+- `tags`: Form tags
+
+### Form Responses
+Submitted form data.
+
+**Required Fields:**
+- `formId`: Associated form ID
+- `enduserId`: Patient who submitted
+- `formTitle`: Title of the form
+
+**Key Fields:**
+- `responses`: Array of form field responses
+- `submittedAt`: Submission timestamp
+- `submittedBy`: User who submitted
+- `publicSubmit`: Boolean for public submissions
+- `scores`: Calculated scores
+- `tags`: Response tags
+
+### Calendar Events
+Appointments and scheduled events.
+
+**Required Fields:**
+- `title`: Event title
+- `startTimeInMS`: Start time in milliseconds
+- `durationInMinutes`: Duration in minutes
+
+**Key Fields:**
+- `attendees`: Array of attendee objects
+- `type`: Event type
+- `description`: Event description
+- `enableVideoCall`: Boolean for video call integration
+- `templateId`: Associated template ID
+- `locationId`: Location ID
+- `cancelledAt`: Cancellation timestamp
+- `completedAt`: Completion timestamp
+- `tags`: Event tags
 
 ### Common Resource Patterns
 Most Tellescope resources follow similar patterns:
 
-**Standard Fields:**
-- `id`: Unique identifier (string)
-- `createdAt`: ISO timestamp of creation
-- `updatedAt`: ISO timestamp of last update
-- `organizationId`: Associated organization ID
-
 **Relationship Fields:**
-- `enduseruId`: References an enduser (patient)
+- `enduserId`: References an enduser (patient)
 - `userId`: References a user (staff member)
+- `organizationIds`: Array of organization IDs for multi-org access
 
 ## Enduser (Patient) Management
 
 ### Basic Operations
 ```python
-# Create a new patient (minimal required fields)
-def create_enduser(email, fname, lname, **optional_fields):
-    patient_data = {
-        "email": email,
-        "fname": fname,
-        "lname": lname,
-        **optional_fields
-    }
+# Create a new patient (no fields are technically required)
+def create_enduser(**patient_data):
+    """
+    Create a new enduser (patient) record
+    
+    Common fields:
+    - email: Patient email address
+    - fname: First name
+    - lname: Last name
+    - phone: Primary phone number
+    - dateOfBirth: Date of birth (MM-DD-YYYY format)
+    - gender: Gender ('Male', 'Female', 'Other', 'Unknown')
+    - externalId: External system identifier
+    - source: Data source (e.g., "Canvas")
+    - tags: Array of tags
+    """
     return create_resource("endusers", patient_data)
 
 # Search patients by various criteria
@@ -263,6 +432,7 @@ def search_endusers(search_params):
     - fname, lname: Name search
     - externalId: External system ID
     - tags: Filter by tags
+    - assignedTo: Filter by assigned user IDs
     """
     return get_resources("endusers", search_params)
 
@@ -277,15 +447,27 @@ def sync_canvas_patient_to_tellescope(canvas_patient):
     """
     Sync Canvas patient data to Tellescope enduser
     """
+    # Map Canvas sex field to Tellescope gender field
+    def map_canvas_sex_to_tellescope_gender(sex):
+        if sex == 'M':
+            return 'Male'
+        elif sex == 'F':
+            return 'Female'
+        elif sex in ['O', 'Other']:
+            return 'Other'
+        else:
+            return 'Unknown'
+    
     # Map Canvas patient to Tellescope enduser format
     tellescope_data = {
         "email": canvas_patient.email or f"patient{canvas_patient.id}@canvas.medical",
         "fname": canvas_patient.first_name,
         "lname": canvas_patient.last_name,
         "phone": canvas_patient.phone_number,
-        "dateOfBirth": canvas_patient.date_of_birth.strftime("%Y-%m-%d") if canvas_patient.date_of_birth else None,
-        "sex": canvas_patient.sex,
+        "dateOfBirth": canvas_patient.date_of_birth.strftime("%m-%d-%Y") if canvas_patient.date_of_birth else None,
+        "gender": map_canvas_sex_to_tellescope_gender(canvas_patient.sex) if canvas_patient.sex else "Unknown",
         "externalId": str(canvas_patient.id),  # Store Canvas patient ID for lookup
+        "source": "Canvas",
         "tags": ["canvas-patient"]
     }
     
@@ -310,65 +492,62 @@ def find_tellescope_patient_by_canvas_id(canvas_patient_id):
 
 ## Communication and Workflow
 
-### Common Communication Resources
-- **Messages**: Secure messaging between staff and patients
-- **SMSMessages**: SMS communication records
-- **Emails**: Email communication records
-- **ChatRooms**: Group chat functionality
-- **Calls**: Phone call records
-
-### Basic Communication Patterns
+### Common Communication Operations
 ```python
-# Send a message to a patient
-def send_message_to_enduser(enduser_id, message_text, user_id):
-    message_data = {
+# Send an email to a patient
+def send_email_to_enduser(enduser_id, subject, text_content, html_content=None, user_id=None):
+    email_data = {
         "enduserId": enduser_id,
-        "userId": user_id,
-        "message": message_text,
-        "channel": "secure_message"  # or other channel types
+        "userId": user_id,  # Will use authenticated user if not specified
+        "subject": subject,
+        "textContent": text_content,
+        "HTMLContent": html_content,
+        "inbound": False
     }
-    return create_resource("messages", message_data)
+    return create_resource("emails", email_data)
 
-# Get conversation history
-def get_enduser_messages(enduser_id, limit=50):
-    params = {
-        "enduserId": enduser_id,
-        "limit": limit
-    }
-    return get_resources("messages", params)
-
-# Send SMS (if SMS integration is configured)
-def send_sms_to_enduser(enduser_id, sms_text):
+# Send an SMS to a patient
+def send_sms_to_enduser(enduser_id, message, user_id=None):
     sms_data = {
         "enduserId": enduser_id,
-        "message": sms_text
+        "userId": user_id,
+        "message": message,
+        "inbound": False,
+        "newThread": True
     }
-    return create_resource("sms-messages", sms_data)
-```
+    return create_resource("sms_messages", sms_data)
 
-### Workflow and Task Management
-```python
-# Common workflow resources
-# - Tasks: Action items and to-dos
-# - Appointments: Scheduled meetings/calls
-# - Forms: Data collection forms
-# - Automations: Workflow triggers
-
-# Create a task for follow-up
-def create_follow_up_task(enduser_id, title, description, assigned_user_id):
-    task_data = {
+# Create a ticket for follow-up
+def create_ticket_for_enduser(enduser_id, title, message=None, user_id=None):
+    ticket_data = {
         "enduserId": enduser_id,
-        "userId": assigned_user_id,
         "title": title,
-        "description": description,
-        "status": "pending"
+        "message": message,
+        "owner": user_id
     }
-    return create_resource("tasks", task_data)
+    return create_resource("tickets", ticket_data)
 
-# Get patient's tasks
-def get_enduser_tasks(enduser_id):
-    params = {"enduserId": enduser_id}
-    return get_resources("tasks", params)
+# Get patient's communication history
+def get_enduser_communications(enduser_id, limit=50):
+    """
+    Get recent communications for an enduser across multiple channels
+    """
+    # Get recent emails
+    emails = get_resources("emails", {
+        "enduserId": enduser_id,
+        "limit": limit
+    })
+    
+    # Get recent SMS messages
+    sms_messages = get_resources("sms_messages", {
+        "enduserId": enduser_id,
+        "limit": limit
+    })
+    
+    return {
+        "emails": emails.get("data", []),
+        "sms_messages": sms_messages.get("data", [])
+    }
 ```
 
 ## Error Handling and Best Practices
@@ -460,7 +639,7 @@ def validate_enduser_data(enduser_data):
 ### Best Practices for AI Assistants
 
 1. **Always validate credentials first** - Call `validate_tellescope_credentials()` at the start of protocols
-2. **Use externalId for integration** - Store Canvas patient IDs in Tellescope's `externalId` field
+2. **Use externalId for integration** - Store Canvas patient IDs in Tellescope's `externalId` field and set the source to "Canvas" when creating new patients
 3. **Handle rate limits gracefully** - Implement retry logic with delays
 4. **Validate data before API calls** - Check required fields and formats
 5. **Use pagination for large datasets** - Don't attempt to fetch all records at once
