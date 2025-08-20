@@ -135,14 +135,49 @@ if not TELLESCOPE_API_KEY:
 ```python
 # CREATE - POST /{resource}
 def create_resource(resource_type, data):
-    return create_tellescope_resource(resource_type, data)
+    try:
+        response = requests.post(
+            f"{TELLESCOPE_API_URL}/{resource_type}",
+            headers={
+                "Authorization": f"API_KEY {TELLESCOPE_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json=data
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"Tellescope API error: {str(e)}")
 
 # READ - GET /{resource} or GET /{resource}/{id}
 def get_resources(resource_type, filters=None):
-    return get_tellescope_data(resource_type, params=filters)
+    try:
+        response = requests.get(
+            f"{TELLESCOPE_API_URL}/{resource_type}",
+            headers={
+                "Authorization": f"API_KEY {TELLESCOPE_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            params=filters
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"Tellescope API error: {str(e)}")
 
 def get_resource_by_id(resource_type, resource_id):
-    return get_tellescope_data(f"{resource_type}/{resource_id}")
+    try:
+        response = requests.get(
+            f"{TELLESCOPE_API_URL}/{resource_type}/{resource_id}",
+            headers={
+                "Authorization": f"API_KEY {TELLESCOPE_API_KEY}",
+                "Content-Type": "application/json"
+            }
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"Tellescope API error: {str(e)}")
 
 # UPDATE - PATCH /{resource}/{id}
 def update_resource(resource_type, resource_id, updates):
@@ -181,7 +216,7 @@ def get_paginated_resources(resource_type, limit=100):
         if last_id:
             params["lastId"] = last_id
             
-        response = get_tellescope_data(resource_type, params)
+        response = get_resources(resource_type, params)
         resources = response.get("data", [])
         
         if not resources:
@@ -205,7 +240,7 @@ def get_recent_resources(resource_type, days_back=7):
     from_date = (datetime.now() - timedelta(days=days_back)).isoformat()
     params = {"fromUpdated": from_date}
     
-    return get_tellescope_data(resource_type, params)
+    return get_resources(resource_type, params)
 
 # Custom filters
 def get_filtered_resources(resource_type, filters):
@@ -215,7 +250,43 @@ def get_filtered_resources(resource_type, filters):
     - limit: Page size (max 100)
     - lastId: Pagination cursor
     """
-    return get_tellescope_data(resource_type, params=filters)
+    return get_resources(resource_type, filters)
+```
+
+### API Response Format
+```python
+# Typical list response format (GET /{resource})
+[
+    { "id": "12345", "fname": "John", "lname": "Doe", ... },
+    { "id": "67890", "fname": "Jane", "lname": "Smith", ... }
+]
+
+# Single resource response (GET /{resource}/{id} or POST /{resource})
+{ 
+    "id": "12345", 
+    "fname": "John", 
+    "lname": "Doe",
+    "createdAt": "2024-01-15T10:30:00Z",
+    "updatedAt": "2024-01-15T10:30:00Z",
+    ...
+}
+
+# Error response format
+{
+    "error": "Resource not found",
+    "code": 404
+}
+
+# Accessing data in responses
+def handle_list_response(response):
+    if isinstance(response, list):
+        return response  # List of records
+    return []
+
+def handle_single_response(response):
+    if isinstance(response, dict) and "id" in response:
+        return response  # Single record
+    return None
 ```
 
 ## Core Data Models
