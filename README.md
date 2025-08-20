@@ -5,24 +5,71 @@ An Open-Source plugin for connecting the Canvas SDK to Tellescope
 
 # Deployment
 
-## Installing to Canvas
-To deploy this plugin to your Canvas instance, please clone this repository. Please follow steps 1 and 2 of the official Canvas deployment guide: [Your First Plugin](http://docs.canvasmedical.com/guides/your-first-plugin/) to configure your own development environment. You should only need to do that once. 
+## Quick Start - Deployment Shortcuts
 
-## Configuring Protocols (Important!)
+For the fastest deployment experience, use the automated deployment script:
 
-Before deploying to Canvas, you must configure which protocols to include in your plugin by running the interactive configuration script:
+### Deploy with All Protocols (Recommended for Development)
+```bash
+python3 canvas_deploy.py install . --all
+```
 
+This command will:
+- Automatically configure the manifest with all available protocols
+- Install the plugin to your Canvas instance
+- No user interaction required
+
+### Deploy with Interactive Protocol Selection
+```bash
+python3 canvas_deploy.py install .
+```
+
+This command will:
+- Run the interactive configuration script to let you choose specific protocols
+- Install the plugin to your Canvas instance after configuration
+
+### Deploy with Existing Configuration
+```bash
+python3 canvas_deploy.py install . --use-existing-configuration
+```
+
+This command will:
+- Use the existing `CANVAS_MANIFEST.json` file (if it exists)
+- Skip the configuration step entirely
+- Install the plugin directly to your Canvas instance
+
+## Manual Setup (Alternative)
+
+### Installing to Canvas
+To deploy this plugin manually to your Canvas instance, please clone this repository. Please follow steps 1 and 2 of the official Canvas deployment guide: [Your First Plugin](http://docs.canvasmedical.com/guides/your-first-plugin/) to configure your own development environment. You should only need to do that once. 
+
+### Configuring Protocols (Important!)
+
+Before deploying to Canvas manually, you must configure which protocols to include in your plugin by running the configuration script:
+
+#### Interactive Configuration
 ```bash
 python3 configure_manifest.py
 ```
 
-This script will:
+#### Auto-select All Protocols
+```bash
+python3 configure_manifest.py --all
+```
+
+The configuration script will:
 - Scan the `protocols/` directory for available protocol files
 - Display each protocol with its description
-- Allow you to interactively select which protocols to include
+- Allow you to interactively select which protocols to include (or auto-select all with `--all`)
 - Generate the `CANVAS_MANIFEST.json` file with your selected protocols
 
 The generated `CANVAS_MANIFEST.json` is used when installing this plugin to your Canvas instance. Only the protocols you select will be deployed and active in your Canvas environment.
+
+#### Manual Canvas Installation
+After configuring your manifest, install the plugin:
+```bash
+canvas install .
+```
 
 ### More Documentation
 
