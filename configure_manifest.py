@@ -95,7 +95,7 @@ def load_example_manifest() -> Dict:
         "effects": [],
         "views": []
     },
-    "secrets": [],
+    "secrets": ["TELLESCOPE_API_KEY", "TELLESCOPE_API_URL"],
     "tags": {},
     "references": [],
     "license": "",

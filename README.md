@@ -3,6 +3,9 @@ Tellescope
 
 An Open-Source plugin for connecting the Canvas SDK to Tellescope
 
+# Canvas Configuration
+In canvas, you need to specify your TELLESCOPE_API_KEY and TELLESCOPE_API_URL. For a Tellescope sandbox/staging account, use https://staging-api.tellescope.com as your URL. For a Production Tellescope account, use https://api.tellescope.com. Please see [Canvas' Guide](https://docs.canvasmedical.com/sdk/secrets/) to set your secrets. "These declared secrets become available for configuration in the Canvas Admin UI when the plugin is installed."
+
 # Deployment
 
 ## Quick Start - Deployment Shortcuts
