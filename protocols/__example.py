@@ -1,3 +1,6 @@
+# Description:
+# This is an example implementation of a protocol
+
 import json
 
 from canvas_sdk.effects import Effect, EffectType

@@ -1,12 +1,12 @@
 {
     "sdk_version": "0.1.4",
     "plugin_version": "0.0.1",
-    "name": "tellescope_canvas",
+    "name": "tellescope",
     "description": "Edit the description in CANVAS_MANIFEST.json",
     "components": {
         "protocols": [
             {
-                "class": "tellescope_canvas.protocols.my_protocol:Protocol",
+                "class": "tellescope.protocols.__example.py:Protocol",
                 "description": "A protocol that does xyz..."
             }
         ],
