@@ -76,15 +76,35 @@ def discover_protocols() -> List[Tuple[str, str, str]]:
 
 
 def load_example_manifest() -> Dict:
-    """Load the example manifest file."""
+    """Load the example manifest from embedded JSON string."""
+    example_manifest_json = """{
+    "sdk_version": "0.1.4",
+    "plugin_version": "0.0.1",
+    "name": "tellescope",
+    "description": "Edit the description in CANVAS_MANIFEST.json",
+    "components": {
+        "protocols": [
+            {
+                "class": "tellescope.protocols.__example.py:Protocol",
+                "description": "A protocol that does xyz..."
+            }
+        ],
+        "commands": [],
+        "content": [],
+        "effects": [],
+        "views": []
+    },
+    "secrets": [],
+    "tags": {},
+    "references": [],
+    "license": "",
+    "diagram": false,
+    "readme": "./README.md"
+}"""
     try:
-        with open('EXAMPLE_CANVAS_MANIFEST.json', 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        print("Error: EXAMPLE_CANVAS_MANIFEST.json not found!")
-        sys.exit(1)
+        return json.loads(example_manifest_json)
     except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON in EXAMPLE_CANVAS_MANIFEST.json: {e}")
+        print(f"Error: Invalid JSON in embedded manifest: {e}")
         sys.exit(1)
 
 
