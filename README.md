@@ -7,8 +7,6 @@ An Open-Source plugin for connecting the Canvas SDK to Tellescope
 
 ## Quick Start - Deployment Shortcuts
 
-For the fastest deployment experience, use the automated deployment script:
-
 ### Deploy with Interactive Protocol Selection (Recommended)
 ```bash
 python3 canvas_deploy.py install .
