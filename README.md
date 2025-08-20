@@ -9,7 +9,17 @@ An Open-Source plugin for connecting the Canvas SDK to Tellescope
 
 For the fastest deployment experience, use the automated deployment script:
 
-### Deploy with All Protocols (Recommended for Development)
+### Deploy with Interactive Protocol Selection (Recommended)
+```bash
+python3 canvas_deploy.py install .
+```
+
+This command will:
+- Run the interactive configuration script to let you choose specific protocols
+- Install the plugin to your Canvas instance after configuration
+- **Recommended for regular use** - ensures you only install protocols you actually need
+
+### Deploy with All Protocols (Recommended for Developers/Contributors)
 ```bash
 python3 canvas_deploy.py install . --all
 ```
@@ -18,15 +28,7 @@ This command will:
 - Automatically configure the manifest with all available protocols
 - Install the plugin to your Canvas instance
 - No user interaction required
-
-### Deploy with Interactive Protocol Selection
-```bash
-python3 canvas_deploy.py install .
-```
-
-This command will:
-- Run the interactive configuration script to let you choose specific protocols
-- Install the plugin to your Canvas instance after configuration
+- **Recommended for development/testing** - installs the full scope of integration for comprehensive testing
 
 ### Deploy with Existing Configuration
 ```bash
