@@ -24,6 +24,8 @@ Tellescope is a HIPAA-compliant healthcare patient CRM platform offering compreh
 ```python
 import requests
 import os
+import time
+from datetime import datetime, timedelta
 
 # Load credentials
 TELLESCOPE_API_KEY = os.getenv("TELLESCOPE_API_KEY")
@@ -95,6 +97,20 @@ if not TELLESCOPE_API_KEY:
 - **Production**: `https://api.tellescope.com/v1`
 - **Staging**: `https://staging-api.tellescope.com/v1`
 
+### Common Endpoints
+| Resource | Endpoint | Description |
+|----------|----------|-------------|
+| Endusers | `/endusers` | Patient/client records |
+| Users | `/users` | Staff/team member accounts |
+| Messages | `/messages` | Secure messaging |
+| SMSMessages | `/sms-messages` | SMS communication records |
+| Emails | `/emails` | Email communication records |
+| Tasks | `/tasks` | Action items and to-dos |
+| Appointments | `/appointments` | Scheduled meetings/calls |
+| Forms | `/forms` | Data collection forms |
+| ChatRooms | `/chat-rooms` | Group chat functionality |
+| Calls | `/calls` | Phone call records |
+
 ### Standard CRUD Operations
 ```python
 # CREATE - POST /{resource}
@@ -112,7 +128,10 @@ def get_resource_by_id(resource_type, resource_id):
 def update_resource(resource_type, resource_id, updates):
     response = requests.patch(
         f"{TELLESCOPE_API_URL}/{resource_type}/{resource_id}",
-        headers=headers,
+        headers={
+            "Authorization": f"API_KEY {TELLESCOPE_API_KEY}",
+            "Content-Type": "application/json"
+        },
         json=updates
     )
     response.raise_for_status()
@@ -122,7 +141,10 @@ def update_resource(resource_type, resource_id, updates):
 def delete_resource(resource_type, resource_id):
     response = requests.delete(
         f"{TELLESCOPE_API_URL}/{resource_type}/{resource_id}",
-        headers=headers
+        headers={
+            "Authorization": f"API_KEY {TELLESCOPE_API_KEY}",
+            "Content-Type": "application/json"
+        }
     )
     response.raise_for_status()
     return response.status_code == 200
@@ -406,7 +428,10 @@ def validate_tellescope_credentials():
     try:
         response = requests.get(
             f"{TELLESCOPE_API_URL}/users",
-            headers=headers,
+            headers={
+                "Authorization": f"API_KEY {TELLESCOPE_API_KEY}",
+                "Content-Type": "application/json"
+            },
             params={"limit": 1}
         )
         response.raise_for_status()
