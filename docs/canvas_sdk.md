@@ -45,6 +45,60 @@ The Canvas Medical SDK is an event-driven framework that allows customization of
 - Secure access to PHI and non-PHI data
 - Integration with standard medical terminologies (ICD-10, SNOMED-CT, CPT)
 
+## Quick Reference
+
+### Essential Imports
+```python
+from canvas_sdk.protocols import BaseProtocol
+from canvas_sdk.effects import Effect
+from canvas_sdk.data import Patient, Appointment, Medication
+from datetime import timezone, timedelta
+```
+
+### Basic Protocol Template
+```python
+class MyProtocol(BaseProtocol):
+    def compute(self) -> list[Effect]:
+        # 1. Validate secrets
+        if not self.secrets.get("TELLESCOPE_API_KEY"):
+            return []
+        
+        # 2. Get data from event
+        patient_id = self.event.payload.get("patient_id")
+        if not patient_id:
+            return []
+        
+        # 3. Query data with error handling
+        try:
+            patient = Patient.objects.get(id=patient_id)
+        except Patient.DoesNotExist:
+            return [Effect(type="ADD_BANNER_ALERT", payload={
+                "type": "error", "message": "Patient not found"
+            })]
+        
+        # 4. Business logic here
+        
+        # 5. Return effects
+        return [Effect(type="ADD_BANNER_ALERT", payload={
+            "type": "success", "message": "Success"
+        })]
+```
+
+### Common Effect Types
+```python
+# Success notification
+Effect(type="ADD_BANNER_ALERT", payload={"type": "success", "message": "Done"})
+
+# Error notification  
+Effect(type="ADD_BANNER_ALERT", payload={"type": "error", "message": "Failed"})
+
+# Create task
+Effect(type="CREATE_TASK", payload={"title": "Task", "patient_id": patient_id})
+
+# Action button
+Effect(type="SHOW_ACTION_BUTTON", payload={"text": "Sync", "handler": "sync_handler"})
+```
+
 ## Protocol Implementation Patterns
 
 ### Basic Protocol Structure
@@ -106,15 +160,22 @@ def compute(self) -> list[Effect]:
 
 ### Importing Data Models
 ```python
+from datetime import timezone, timedelta
 from canvas_sdk.data import Patient, Appointment, Medication, Condition
 from canvas_sdk.data import Labs, Tasks, Messages, Notes, CareTeam
 ```
 
 ### Querying Patient Data
 ```python
-# Get patient from event
+# Get patient from event (with error checking)
 patient_id = self.event.payload.get("patient_id")
-patient = Patient.objects.get(id=patient_id)
+if not patient_id:
+    return []  # Early return if no patient ID
+
+try:
+    patient = Patient.objects.get(id=patient_id)
+except Patient.DoesNotExist:
+    return create_error_effects("Patient not found")
 
 # Access patient fields
 patient_name = f"{patient.first_name} {patient.last_name}"
@@ -124,6 +185,7 @@ patient_mrn = patient.medical_record_number
 
 ### Querying Related Medical Data
 ```python
+# Assuming patient object is available from previous query
 # Get patient's appointments
 appointments = Appointment.objects.filter(patient=patient)
 upcoming_appointments = appointments.filter(
@@ -186,6 +248,7 @@ modal_launch = Effect(type="LAUNCH_MODAL", payload={
 })
 
 # Task and Workflow Effects
+provider_id = self.event.payload.get("provider_id")  # or get from context
 create_task = Effect(type="CREATE_TASK", payload={
     "title": "Follow up on Tellescope sync",
     "description": "Verify patient data synchronization",
@@ -194,8 +257,9 @@ create_task = Effect(type="CREATE_TASK", payload={
 })
 
 # Data Modification Effects
+patient_id = self.event.payload.get("patient_id")  # or get from context
 medication_statement = Effect(type="ORIGINATE_MEDICATION_STATEMENT_COMMAND", payload={
-    "patient_id": patient.id,
+    "patient_id": patient_id,
     "medication_name": "Metformin",
     "dosage": "500mg twice daily"
 })
