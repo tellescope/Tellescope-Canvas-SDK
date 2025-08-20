@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import json
 import os
 import re
@@ -109,6 +110,10 @@ def load_example_manifest() -> Dict:
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Canvas Manifest Configuration Tool")
+    parser.add_argument('--all', action='store_true', help='Include all available protocols without user interaction')
+    args = parser.parse_args()
+    
     print("Canvas Manifest Configuration Tool")
     print("=" * 40)
     print()
@@ -134,31 +139,41 @@ def main():
         print(f"   Description: {description}")
         print()
     
-    # Get user selection
-    print("Select the protocols you want to include in your manifest:")
-    print("Enter the numbers separated by commas (e.g., 1,3,4) or 'all' for all protocols:")
-    print("Press Enter without typing anything to include no protocols.")
+    selected_protocols = []
+    
+    if args.all:
+        # Auto-select all protocols
+        selected_protocols = protocols
+        print("Auto-selecting all protocols (--all flag specified)")
+    else:
+        # Get user selection
+        print("Select the protocols you want to include in your manifest:")
+        print("Enter the numbers separated by commas (e.g., 1,3,4) or 'all' for all protocols:")
+        print("Press Enter without typing anything to include no protocols.")
+        
+        try:
+            user_input = input("> ").strip()
+            
+            if user_input.lower() == 'all':
+                selected_protocols = protocols
+            elif user_input:
+                # Parse comma-separated numbers
+                try:
+                    indices = [int(x.strip()) for x in user_input.split(',')]
+                    for idx in indices:
+                        if 1 <= idx <= len(protocols):
+                            selected_protocols.append(protocols[idx - 1])
+                        else:
+                            print(f"Warning: Invalid selection '{idx}' ignored (must be between 1 and {len(protocols)})")
+                except ValueError:
+                    print("Error: Invalid input format. Please enter numbers separated by commas.")
+                    sys.exit(1)
+        
+        except KeyboardInterrupt:
+            print("\n\nOperation cancelled.")
+            sys.exit(1)
     
     try:
-        user_input = input("> ").strip()
-        
-        selected_protocols = []
-        
-        if user_input.lower() == 'all':
-            selected_protocols = protocols
-        elif user_input:
-            # Parse comma-separated numbers
-            try:
-                indices = [int(x.strip()) for x in user_input.split(',')]
-                for idx in indices:
-                    if 1 <= idx <= len(protocols):
-                        selected_protocols.append(protocols[idx - 1])
-                    else:
-                        print(f"Warning: Invalid selection '{idx}' ignored (must be between 1 and {len(protocols)})")
-            except ValueError:
-                print("Error: Invalid input format. Please enter numbers separated by commas.")
-                sys.exit(1)
-        
         # Update manifest with selected protocols
         manifest['components']['protocols'] = []
         for filename, class_path, description in selected_protocols:
@@ -181,9 +196,6 @@ def main():
         else:
             print("No protocols were selected.")
     
-    except KeyboardInterrupt:
-        print("\n\nOperation cancelled.")
-        sys.exit(1)
     except Exception as e:
         print(f"\nError: {str(e)}")
         sys.exit(1)
