@@ -151,7 +151,7 @@ class TellescopeAPI:
         return response.status_code == 200
     
     def list(self, resource_type: str, filters: Optional[Dict[str, Any]] = None, 
-             mongodb_filter: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+             mongodb_filter: Optional[Dict[str, Any]] = None, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         List records with optional filtering
         
@@ -159,6 +159,7 @@ class TellescopeAPI:
             resource_type: Type of resource (e.g., "endusers", "emails", "tickets") - use plural
             filters: Traditional filter parameters
             mongodb_filter: MongoDB query for flexible filtering (recommended)
+            limit: Maximum number of records to return
             
         Returns:
             List of records
@@ -169,6 +170,8 @@ class TellescopeAPI:
         params = filters or {}
         if mongodb_filter:
             params["mdbFilter"] = json.dumps(mongodb_filter)
+        if limit:
+            params["limit"] = limit
         
         response = self._make_request("GET", url, params=params)
         result = response.json()
