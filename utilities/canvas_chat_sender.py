@@ -148,8 +148,10 @@ class CanvasChatSender:
             message_data = {
                 "roomId": chat_room_id,
                 "senderId": sender_user_id,
+                "userId": sender_user_id,
                 "message": "",
-                "html": html_message
+                "html": html_message,
+                "source": "Canvas",
             }
             
             return self.tellescope_api.create("chat", message_data)
