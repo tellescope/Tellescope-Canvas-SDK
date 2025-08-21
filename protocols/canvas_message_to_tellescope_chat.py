@@ -8,7 +8,7 @@ from typing import Optional
 from canvas_sdk.effects import Effect, EffectType
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
-from canvas_sdk.data import Message, CanvasUser, Staff
+from canvas_sdk.v1.data import Message, CanvasUser, Staff
 from logger import log
 
 from tellescope.utilities.canvas_chat_sender import CanvasChatSender
