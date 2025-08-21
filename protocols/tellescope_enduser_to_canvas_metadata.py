@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 
 from canvas_sdk.effects import Effect, EffectType
+from canvas_sdk.effects.patient_metadata import PatientMetadata
 from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from canvas_sdk.caching.plugins import get_cache
@@ -70,6 +71,16 @@ class Protocol(BaseProtocol):
 
             patient_id = patient.id
             log.debug(f"Processing PATIENT_UPDATED event for Canvas patient ID: {patient_id}")
+
+            # Load and log existing metadata for this patient
+            try:
+                from canvas_sdk.v1.data.patient_metadata import PatientMetadata as PatientMetadataData
+                existing_metadata = PatientMetadataData.objects.filter(patient_id=patient_id)
+                log.info(f"Existing metadata for patient {patient_id}: {len(existing_metadata)} entries")
+                for metadata in existing_metadata:
+                    log.info(f"  Key: {metadata.key}, Value: {metadata.value}")
+            except Exception as e:
+                log.warning(f"Could not load existing metadata for patient {patient_id}: {str(e)}")
 
             # Check rate limiting using Canvas cache - skip if updated within last 5 minutes
             cache_key = f"patient_metadata_sync:{patient_id}"
@@ -200,18 +211,13 @@ class Protocol(BaseProtocol):
                     # For numbers and other types - convert to string
                     value_str = str(field_value)
                 
-                # Create PatientMetadata effect
-                metadata_payload = {
-                    "patient_id": patient_id,
-                    "namespace": "tellescope_custom_fields",
-                    "key": field_name,
-                    "value": value_str
-                }
-                
-                effect = Effect(
-                    type=EffectType.UPSERT_PATIENT_METADATA,
-                    payload=json.dumps(metadata_payload)
+                # Create PatientMetadata effect following Canvas SDK example
+                metadata = PatientMetadata(
+                    patient_id=patient_id,
+                    key=f"tellescope_custom_fields.{field_name}"
                 )
+                
+                effect = metadata.upsert(value_str)
                 effects.append(effect)
                 
                 log.info(f"Setting PatientMetadata for patient {patient_id}: {field_name} = '{value_str}'")
