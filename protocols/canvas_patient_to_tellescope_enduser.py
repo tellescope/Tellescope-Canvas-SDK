@@ -27,16 +27,20 @@ class Protocol(BaseProtocol):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # 1. Validate secrets
-        if not self.secrets.get("TELLESCOPE_API_KEY"):
-            return []
-
-        self.tellescope_api = TellescopeAPI(self.secrets.get("TELLESCOPE_API_KEY"), self.secrets.get("TELLESCOPE_API_URL"))
+        # 1. Validate secrets - initialize TellescopeAPI only if secrets are available
+        if self.secrets.get("TELLESCOPE_API_KEY"):
+            self.tellescope_api = TellescopeAPI(self.secrets.get("TELLESCOPE_API_KEY"), self.secrets.get("TELLESCOPE_API_URL"))
+        else:
+            self.tellescope_api = None
 
     def compute(self) -> list[Effect]:
         """
         Handle patient creation event by creating corresponding Tellescope enduser
         """
+        # Return early if secrets are not available
+        if not self.tellescope_api:
+            return []
+            
         patient_id = None
         try:
             # Get the patient instance from the event
@@ -48,6 +52,17 @@ class Protocol(BaseProtocol):
 
             patient_id = patient.id
             log.info(f"Processing patient creation for Canvas patient ID: {patient_id}")
+
+            # Return early if patient already has Tellescope FHIR identifier
+            if self._has_tellescope_identifier(patient):
+                tellescope_id = self._get_tellescope_identifier_value(patient)
+                log.info(f"Patient {patient_id} already has Tellescope FHIR identifier: {tellescope_id}")
+                return [self._create_success_effect(
+                    f"Patient already has Tellescope identifier: {tellescope_id}",
+                    tellescope_id or "unknown",
+                    patient_id,
+                    "fhir_identifier_exists"
+                )]
 
             # Check if enduser already exists in Tellescope (avoid duplicates)
             existing_enduser = self._find_existing_enduser(patient_id)
@@ -159,20 +174,65 @@ class Protocol(BaseProtocol):
             
             # Demographics
             "dateOfBirth": date_of_birth,
-            "gender": gender_mapping.get(getattr(patient, 'sex', None), 'Unknown'),    
+            "gender": gender_mapping.get(getattr(patient, 'sex', None), 'Unknown')
         }
-
-        # Add additional Canvas-specific fields if available
-        if hasattr(patient, 'address'):
-            enduser_data["fields"]["canvas_address"] = str(patient.address)
-        
-        if hasattr(patient, 'date_created'):
-            enduser_data["fields"]["canvas_created_date"] = str(patient.date_created)
 
         # Remove empty string values and None values
         enduser_data = {k: v for k, v in enduser_data.items() if v != '' and v is not None}
         
         return enduser_data
+
+    def _has_tellescope_identifier(self, patient) -> bool:
+        """
+        Check if patient has a FHIR identifier with system='Tellescope'
+        
+        Args:
+            patient: Canvas patient instance
+            
+        Returns:
+            True if patient has a Tellescope FHIR identifier, False otherwise
+        """
+        # Check if patient has identifier attribute (FHIR-style)
+        if hasattr(patient, 'identifier') and patient.identifier:
+            for identifier in patient.identifier:
+                if (isinstance(identifier, dict) and 
+                    identifier.get('system') == 'Tellescope'):
+                    return True
+        
+        # Check if patient has identifiers attribute (alternative naming)
+        if hasattr(patient, 'identifiers') and patient.identifiers:
+            for identifier in patient.identifiers:
+                if (isinstance(identifier, dict) and 
+                    identifier.get('system') == 'Tellescope'):
+                    return True
+        
+        return False
+
+    def _get_tellescope_identifier_value(self, patient) -> Optional[str]:
+        """
+        Get the value of the Tellescope identifier if it exists
+        
+        Args:
+            patient: Canvas patient instance
+            
+        Returns:
+            The Tellescope identifier value or None if not found
+        """
+        # Check identifier attribute
+        if hasattr(patient, 'identifier') and patient.identifier:
+            for identifier in patient.identifier:
+                if (isinstance(identifier, dict) and 
+                    identifier.get('system') == 'Tellescope'):
+                    return identifier.get('value')
+        
+        # Check identifiers attribute
+        if hasattr(patient, 'identifiers') and patient.identifiers:
+            for identifier in patient.identifiers:
+                if (isinstance(identifier, dict) and 
+                    identifier.get('system') == 'Tellescope'):
+                    return identifier.get('value')
+        
+        return None
 
     def _create_success_effect(self, message: str, tellescope_enduser_id: str, canvas_patient_id: str, operation_type: str = "unknown") -> Effect:
         """
