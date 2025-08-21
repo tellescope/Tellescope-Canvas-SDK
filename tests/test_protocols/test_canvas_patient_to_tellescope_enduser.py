@@ -17,6 +17,60 @@ from protocols.canvas_patient_to_tellescope_enduser import Protocol
 
 class TestCanvasPatientToTellescopeEnduserProtocol:
     """Test suite for the Canvas to Tellescope patient sync protocol"""
+    
+    def test_error_categorization_validation_error(self, protocol_instance):
+        """Test error categorization for validation errors"""
+        # Mock API validation error
+        protocol_instance.tellescope_api.find_by.return_value = None
+        protocol_instance.tellescope_api.create.side_effect = ValueError("Invalid email format")
+
+        # Execute protocol
+        effects = protocol_instance.compute()
+
+        # Verify error effect with proper categorization
+        assert len(effects) == 1
+        effect = effects[0]
+        payload = json.loads(effect.payload)
+        assert payload["status"] == "error"
+        assert payload["error_category"] == "validation_error"
+        assert "Data validation failed" in payload["message"]
+        assert payload["retry_recommended"] == False
+    
+    def test_error_categorization_authentication_error(self, protocol_instance):
+        """Test error categorization for authentication errors"""
+        # Mock API authentication error
+        protocol_instance.tellescope_api.find_by.return_value = None
+        protocol_instance.tellescope_api.create.side_effect = PermissionError("Invalid API key")
+
+        # Execute protocol
+        effects = protocol_instance.compute()
+
+        # Verify error effect with proper categorization
+        assert len(effects) == 1
+        effect = effects[0]
+        payload = json.loads(effect.payload)
+        assert payload["status"] == "error"
+        assert payload["error_category"] == "authentication_error"
+        assert "Authentication failed" in payload["message"]
+        assert payload["retry_recommended"] == False
+    
+    def test_error_categorization_connection_error(self, protocol_instance):
+        """Test error categorization for connection errors"""
+        # Mock API connection error
+        protocol_instance.tellescope_api.find_by.return_value = None
+        protocol_instance.tellescope_api.create.side_effect = ConnectionError("Network timeout")
+
+        # Execute protocol
+        effects = protocol_instance.compute()
+
+        # Verify error effect with proper categorization
+        assert len(effects) == 1
+        effect = effects[0]
+        payload = json.loads(effect.payload)
+        assert payload["status"] == "error"
+        assert payload["error_category"] == "connection_error"
+        assert "Connection failed" in payload["message"]
+        assert payload["retry_recommended"] == False
 
     @pytest.fixture
     def mock_canvas_patient(self):
@@ -107,6 +161,11 @@ class TestCanvasPatientToTellescopeEnduserProtocol:
         assert payload["status"] == "success"
         assert payload["tellescope_enduser_id"] == "tellescope_enduser_456"
         assert payload["canvas_patient_id"] == "canvas_patient_123"
+        assert payload["operation_type"] == "enduser_creation"
+        assert payload["event_type"] == "PATIENT_CREATED"
+        assert payload["resource_id"] == "canvas_patient_123"
+        assert payload["target_system"] == "tellescope"
+        assert payload["source_system"] == "canvas"
 
     def test_existing_enduser_handling(self, protocol_instance):
         """Test handling when enduser already exists in Tellescope"""
@@ -132,6 +191,7 @@ class TestCanvasPatientToTellescopeEnduserProtocol:
         assert payload["status"] == "success"
         assert "already exists" in payload["message"]
         assert payload["tellescope_enduser_id"] == "existing_enduser_789"
+        assert payload["operation_type"] == "duplicate_handling"
 
     def test_gender_mapping(self, protocol_instance, mock_canvas_patient):
         """Test gender mapping from Canvas to Tellescope"""
@@ -223,8 +283,10 @@ class TestCanvasPatientToTellescopeEnduserProtocol:
         
         payload = json.loads(effect.payload)
         assert payload["status"] == "error"
-        assert "Failed to create Tellescope enduser" in payload["message"]
+        assert "Unexpected error" in payload["message"]
         assert "API connection failed" in payload["message"]
+        assert payload["error_category"] == "unexpected_error"
+        assert payload["retry_recommended"] == True
 
     def test_error_handling_missing_patient_instance(self, protocol_instance):
         """Test error handling when patient instance is missing"""
@@ -240,6 +302,8 @@ class TestCanvasPatientToTellescopeEnduserProtocol:
         payload = json.loads(effect.payload)
         assert payload["status"] == "error"
         assert "Patient instance not available" in payload["message"]
+        assert payload["error_category"] == "missing_patient_instance"
+        assert payload["retry_recommended"] == False
 
     def test_custom_fields_mapping(self, protocol_instance, mock_canvas_patient):
         """Test that custom fields are properly mapped"""
@@ -285,6 +349,7 @@ class TestCanvasPatientToTellescopeEnduserProtocol:
         assert len(effects) == 1
         payload = json.loads(effects[0].payload)
         assert payload["status"] == "success"
+        assert payload["operation_type"] == "enduser_creation"
 
         # Verify create was called with minimal but valid data
         create_call_args = protocol_instance.tellescope_api.create.call_args
