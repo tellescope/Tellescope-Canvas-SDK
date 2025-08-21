@@ -36,44 +36,6 @@ class TestCanvasPatientToTellescopeEnduserProtocol:
         assert "Data validation failed" in payload["message"]
         assert payload["retry_recommended"] == False
     
-    def test_has_tellescope_identifier_helper_method(self, protocol_instance, mock_canvas_patient):
-        """Test the _has_tellescope_identifier helper method"""
-        # Test with no identifiers
-        assert not protocol_instance._has_tellescope_identifier(mock_canvas_patient)
-
-        # Test with identifier attribute containing Tellescope system
-        mock_canvas_patient.identifier = [{"system": "Tellescope", "value": "test"}]
-        assert protocol_instance._has_tellescope_identifier(mock_canvas_patient)
-
-        # Test with identifier attribute not containing Tellescope system
-        mock_canvas_patient.identifier = [{"system": "MRN", "value": "test"}]
-        assert not protocol_instance._has_tellescope_identifier(mock_canvas_patient)
-
-        # Test with identifiers attribute containing Tellescope system
-        delattr(mock_canvas_patient, 'identifier')
-        mock_canvas_patient.identifiers = [{"system": "Tellescope", "value": "test"}]
-        assert protocol_instance._has_tellescope_identifier(mock_canvas_patient)
-
-    def test_get_tellescope_identifier_value_helper_method(self, protocol_instance, mock_canvas_patient):
-        """Test the _get_tellescope_identifier_value helper method"""
-        # Test with no identifiers
-        assert protocol_instance._get_tellescope_identifier_value(mock_canvas_patient) is None
-
-        # Test with identifier attribute containing Tellescope system
-        mock_canvas_patient.identifier = [{"system": "Tellescope", "value": "enduser_123"}]
-        assert protocol_instance._get_tellescope_identifier_value(mock_canvas_patient) == "enduser_123"
-
-        # Test with identifiers attribute containing Tellescope system
-        delattr(mock_canvas_patient, 'identifier')
-        mock_canvas_patient.identifiers = [{"system": "Tellescope", "value": "enduser_456"}]
-        assert protocol_instance._get_tellescope_identifier_value(mock_canvas_patient) == "enduser_456"
-
-        # Test with multiple identifiers, Tellescope not first
-        mock_canvas_patient.identifiers = [
-            {"system": "MRN", "value": "MRN123"},
-            {"system": "Tellescope", "value": "enduser_789"}
-        ]
-        assert protocol_instance._get_tellescope_identifier_value(mock_canvas_patient) == "enduser_789"
 
     def test_error_categorization_authentication_error(self, protocol_instance):
         """Test error categorization for authentication errors"""
@@ -176,11 +138,28 @@ class TestCanvasPatientToTellescopeEnduserProtocol:
         # Execute protocol
         effects = protocol_instance.compute()
 
-        # Verify TellescopeAPI calls
-        protocol_instance.tellescope_api.find_by.assert_called_once_with(
-            "endusers", 
-            {"externalId": "canvas_patient_123"}
-        )
+        # Verify TellescopeAPI calls with comprehensive OR query
+        protocol_instance.tellescope_api.find_by.assert_called_once()
+        call_args = protocol_instance.tellescope_api.find_by.call_args[0]
+        assert call_args[0] == "endusers"
+        mongodb_filter = call_args[1]
+        
+        # Verify the query includes both externalId and references conditions
+        assert "$or" in mongodb_filter
+        assert len(mongodb_filter["$or"]) == 2
+        
+        # Check primary match condition (source="Canvas" AND externalId)
+        primary_condition = mongodb_filter["$or"][0]
+        assert "$and" in primary_condition
+        assert {"source": "Canvas"} in primary_condition["$and"]
+        assert {"externalId": "canvas_patient_123"} in primary_condition["$and"]
+        
+        # Check secondary match condition (references)
+        secondary_condition = mongodb_filter["$or"][1]
+        assert "references" in secondary_condition
+        assert "$elemMatch" in secondary_condition["references"]
+        assert secondary_condition["references"]["$elemMatch"]["type"] == "Canvas"
+        assert secondary_condition["references"]["$elemMatch"]["id"] == "canvas_patient_123"
         
         # Verify create was called with correct data
         create_call_args = protocol_instance.tellescope_api.create.call_args
@@ -225,8 +204,30 @@ class TestCanvasPatientToTellescopeEnduserProtocol:
         # Execute protocol
         effects = protocol_instance.compute()
 
-        # Verify find_by was called but create was not
+        # Verify find_by was called with comprehensive OR query
         protocol_instance.tellescope_api.find_by.assert_called_once()
+        call_args = protocol_instance.tellescope_api.find_by.call_args[0]
+        assert call_args[0] == "endusers"
+        mongodb_filter = call_args[1]
+        
+        # Verify the query includes both externalId and references conditions
+        assert "$or" in mongodb_filter
+        assert len(mongodb_filter["$or"]) == 2
+        
+        # Check primary match condition (source="Canvas" AND externalId)
+        primary_condition = mongodb_filter["$or"][0]
+        assert "$and" in primary_condition
+        assert {"source": "Canvas"} in primary_condition["$and"]
+        assert {"externalId": "canvas_patient_123"} in primary_condition["$and"]
+        
+        # Check secondary match condition (references)
+        secondary_condition = mongodb_filter["$or"][1]
+        assert "references" in secondary_condition
+        assert "$elemMatch" in secondary_condition["references"]
+        assert secondary_condition["references"]["$elemMatch"]["type"] == "Canvas"
+        assert secondary_condition["references"]["$elemMatch"]["id"] == "canvas_patient_123"
+        
+        # Verify create was not called
         protocol_instance.tellescope_api.create.assert_not_called()
 
         # Verify success effect for existing enduser
@@ -391,121 +392,3 @@ class TestCanvasPatientToTellescopeEnduserProtocol:
         assert enduser_data["source"] == "Canvas"
         assert enduser_data["email"] == "patientminimal_patient_456@canvas.medical"
         assert enduser_data["gender"] == "Unknown"
-
-    def test_early_return_with_tellescope_fhir_identifier(self, protocol_instance, mock_canvas_patient):
-        """Test early return when patient already has Tellescope FHIR identifier"""
-        # Add Tellescope identifier to the patient
-        mock_canvas_patient.identifier = [
-            {
-                "system": "Tellescope",
-                "value": "existing_enduser_123",
-                "use": "usual"
-            },
-            {
-                "system": "MRN",
-                "value": "MRN12345",
-                "use": "official"
-            }
-        ]
-
-        # Execute protocol
-        effects = protocol_instance.compute()
-
-        # Verify no API calls were made
-        protocol_instance.tellescope_api.find_by.assert_not_called()
-        protocol_instance.tellescope_api.create.assert_not_called()
-
-        # Verify success effect for early return
-        assert len(effects) == 1
-        effect = effects[0]
-        payload = json.loads(effect.payload)
-        assert payload["status"] == "success"
-        assert "already has Tellescope identifier" in payload["message"]
-        assert payload["tellescope_enduser_id"] == "existing_enduser_123"
-        assert payload["operation_type"] == "fhir_identifier_exists"
-
-    def test_early_return_with_identifiers_attribute(self, protocol_instance, mock_canvas_patient):
-        """Test early return when patient has identifiers (plural) attribute"""
-        # Ensure patient doesn't have identifier attribute
-        if hasattr(mock_canvas_patient, 'identifier'):
-            delattr(mock_canvas_patient, 'identifier')
-            
-        # Add Tellescope identifier using 'identifiers' attribute
-        mock_canvas_patient.identifiers = [
-            {
-                "system": "Tellescope",
-                "value": "existing_enduser_456",
-                "use": "usual"
-            }
-        ]
-
-        # Execute protocol
-        effects = protocol_instance.compute()
-
-        # Verify no API calls were made
-        protocol_instance.tellescope_api.find_by.assert_not_called()
-        protocol_instance.tellescope_api.create.assert_not_called()
-
-        # Verify success effect for early return
-        assert len(effects) == 1
-        effect = effects[0]
-        payload = json.loads(effect.payload)
-        assert payload["status"] == "success"
-        assert payload["tellescope_enduser_id"] == "existing_enduser_456"
-        assert payload["operation_type"] == "fhir_identifier_exists"
-
-    def test_no_early_return_without_tellescope_identifier(self, protocol_instance, mock_canvas_patient):
-        """Test normal processing when patient has other identifiers but not Tellescope"""
-        # Add non-Tellescope identifiers
-        mock_canvas_patient.identifier = [
-            {
-                "system": "MRN",
-                "value": "MRN12345",
-                "use": "official"
-            },
-            {
-                "system": "SSN",
-                "value": "123-45-6789",
-                "use": "secondary"
-            }
-        ]
-
-        protocol_instance.tellescope_api.find_by.return_value = None
-        protocol_instance.tellescope_api.create.return_value = {"id": "new_enduser"}
-
-        # Execute protocol
-        effects = protocol_instance.compute()
-
-        # Verify API calls were made (normal processing)
-        protocol_instance.tellescope_api.find_by.assert_called_once()
-        protocol_instance.tellescope_api.create.assert_called_once()
-
-        # Verify success effect for normal creation
-        assert len(effects) == 1
-        effect = effects[0]
-        payload = json.loads(effect.payload)
-        assert payload["operation_type"] == "enduser_creation"
-
-    def test_early_return_with_empty_tellescope_identifier_value(self, protocol_instance, mock_canvas_patient):
-        """Test early return when Tellescope identifier exists but has empty value"""
-        # Add Tellescope identifier with empty value
-        mock_canvas_patient.identifier = [
-            {
-                "system": "Tellescope",
-                "value": "",
-                "use": "usual"
-            }
-        ]
-
-        # Execute protocol
-        effects = protocol_instance.compute()
-
-        # Verify early return still occurs
-        protocol_instance.tellescope_api.find_by.assert_not_called()
-        protocol_instance.tellescope_api.create.assert_not_called()
-
-        # Verify success effect shows "unknown" for empty value
-        assert len(effects) == 1
-        effect = effects[0]
-        payload = json.loads(effect.payload)
-        assert payload["tellescope_enduser_id"] == "unknown"

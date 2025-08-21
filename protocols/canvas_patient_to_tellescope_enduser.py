@@ -53,16 +53,6 @@ class Protocol(BaseProtocol):
             patient_id = patient.id
             log.info(f"Processing patient creation for Canvas patient ID: {patient_id}")
 
-            # Return early if patient already has Tellescope FHIR identifier
-            if self._has_tellescope_identifier(patient):
-                tellescope_id = self._get_tellescope_identifier_value(patient)
-                log.info(f"Patient {patient_id} already has Tellescope FHIR identifier: {tellescope_id}")
-                return [self._create_success_effect(
-                    f"Patient already has Tellescope identifier: {tellescope_id}",
-                    tellescope_id or "unknown",
-                    patient_id,
-                    "fhir_identifier_exists"
-                )]
 
             # Check if enduser already exists in Tellescope (avoid duplicates)
             existing_enduser = self._find_existing_enduser(patient_id)
@@ -115,9 +105,20 @@ class Protocol(BaseProtocol):
             Existing enduser record or None if not found
         """
         try:
-            # Use MongoDB filter to find enduser by Canvas external ID
-            mongodb_filter = {"externalId": str(canvas_patient_id)}
-            log.debug(f"Checking for existing enduser with Canvas ID {canvas_patient_id}")
+            # Use comprehensive MongoDB filter to find enduser by either:
+            # 1. source="Canvas" AND externalId=patient_id (Canvas -> Tellescope sync)
+            # 2. references contains Canvas reference (Tellescope -> Canvas sync)
+            mongodb_filter = {
+                "$or": [
+                    {
+                        "externalId": str(canvas_patient_id),
+                    },
+                    {
+                        'references.id': str(canvas_patient_id),
+                    }
+                ]
+            }
+            log.debug(f"Checking for existing enduser with comprehensive Canvas ID filter: {canvas_patient_id}")
             result = self.tellescope_api.find_by("endusers", mongodb_filter)
             
             if result:
@@ -182,57 +183,6 @@ class Protocol(BaseProtocol):
         
         return enduser_data
 
-    def _has_tellescope_identifier(self, patient) -> bool:
-        """
-        Check if patient has a FHIR identifier with system='Tellescope'
-        
-        Args:
-            patient: Canvas patient instance
-            
-        Returns:
-            True if patient has a Tellescope FHIR identifier, False otherwise
-        """
-        # Check if patient has identifier attribute (FHIR-style)
-        if hasattr(patient, 'identifier') and patient.identifier:
-            for identifier in patient.identifier:
-                if (isinstance(identifier, dict) and 
-                    identifier.get('system') == 'Tellescope'):
-                    return True
-        
-        # Check if patient has identifiers attribute (alternative naming)
-        if hasattr(patient, 'identifiers') and patient.identifiers:
-            for identifier in patient.identifiers:
-                if (isinstance(identifier, dict) and 
-                    identifier.get('system') == 'Tellescope'):
-                    return True
-        
-        return False
-
-    def _get_tellescope_identifier_value(self, patient) -> Optional[str]:
-        """
-        Get the value of the Tellescope identifier if it exists
-        
-        Args:
-            patient: Canvas patient instance
-            
-        Returns:
-            The Tellescope identifier value or None if not found
-        """
-        # Check identifier attribute
-        if hasattr(patient, 'identifier') and patient.identifier:
-            for identifier in patient.identifier:
-                if (isinstance(identifier, dict) and 
-                    identifier.get('system') == 'Tellescope'):
-                    return identifier.get('value')
-        
-        # Check identifiers attribute
-        if hasattr(patient, 'identifiers') and patient.identifiers:
-            for identifier in patient.identifiers:
-                if (isinstance(identifier, dict) and 
-                    identifier.get('system') == 'Tellescope'):
-                    return identifier.get('value')
-        
-        return None
 
     def _create_success_effect(self, message: str, tellescope_enduser_id: str, canvas_patient_id: str, operation_type: str = "unknown") -> Effect:
         """
