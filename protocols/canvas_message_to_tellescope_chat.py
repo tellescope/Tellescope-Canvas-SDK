@@ -184,36 +184,32 @@ class Protocol(BaseProtocol):
 
     def _create_success_effects(self, message: str) -> list[Effect]:
         """
-        Create success banner alert effects
+        Create success log effects
         
         Args:
-            message: Success message to display
+            message: Success message to log
             
         Returns:
             List of success effects
         """
-        return [Effect(
-            type=EffectType.ADD_BANNER_ALERT,
-            payload={
-                "type": "success",
-                "message": message
-            }
-        )]
+        payload = {
+            "type": "success",
+            "message": message
+        }
+        return [Effect(type=EffectType.LOG, payload=json.dumps(payload))]
 
     def _create_error_effects(self, error_message: str) -> list[Effect]:
         """
-        Create error banner alert effects
+        Create error log effects
         
         Args:
-            error_message: Error message to display
+            error_message: Error message to log
             
         Returns:
             List of error effects
         """
-        return [Effect(
-            type=EffectType.ADD_BANNER_ALERT,
-            payload={
-                "type": "error",
-                "message": f"Chat forwarding error: {error_message}"
-            }
-        )]
+        payload = {
+            "type": "error",
+            "message": f"Chat forwarding error: {error_message}"
+        }
+        return [Effect(type=EffectType.LOG, payload=json.dumps(payload))]
