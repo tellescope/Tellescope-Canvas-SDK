@@ -9,7 +9,7 @@ import json
 from typing import Optional, Dict, Any, List
 from logger import log
 
-from utilities.tellescope_api import TellescopeAPI
+from tellescope.utilities.tellescope_api import TellescopeAPI
 
 
 class CanvasEnduserLookup:
