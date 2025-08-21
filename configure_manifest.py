@@ -2,7 +2,7 @@
 
 import argparse
 import json
-import os
+import os # it's okay to import os here because this file is not actually used by Canvas
 import re
 import sys
 from typing import Dict, List, Tuple

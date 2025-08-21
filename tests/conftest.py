@@ -3,7 +3,6 @@ Pytest configuration and shared fixtures for Tellescope Canvas SDK tests
 """
 
 import pytest
-import os
 from unittest.mock import Mock
 from dotenv import load_dotenv
 

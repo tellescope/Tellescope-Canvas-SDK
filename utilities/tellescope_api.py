@@ -12,7 +12,7 @@ Follows the API conventions where:
 
 import requests
 import json
-import os
+from typing import Optional
 from typing import Dict, Any, Optional, List, Union
 
 
@@ -24,15 +24,13 @@ class TellescopeAPI:
         Initialize Tellescope API utility
         
         Args:
-            api_key: Tellescope API key (defaults to TELLESCOPE_API_KEY env var)
-            api_url: Tellescope API URL (defaults to TELLESCOPE_API_URL env var)
+            api_key: Tellescope API key (must be provided)
+            api_url: Tellescope API URL (defaults to https://api.tellescope.com/v1)
         """
-        self.api_key = api_key or os.getenv("TELLESCOPE_API_KEY")
-        self.api_url = api_url or os.getenv("TELLESCOPE_API_URL", "https://api.tellescope.com/v1")
-        
+        self.api_key = api_key
+        self.api_url = api_url or "https://api.tellescope.com/v1"
         if not self.api_key:
-            raise ValueError("API key is required. Set TELLESCOPE_API_KEY environment variable or pass api_key parameter")
-        
+            raise ValueError("API key is required. Pass api_key parameter explicitly.")
         self.headers = {
             "Authorization": f"API_KEY {self.api_key}",
             "Content-Type": "application/json"
