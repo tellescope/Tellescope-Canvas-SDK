@@ -17,6 +17,10 @@ docs/
 └── tellescope_api.md # Tellescope API documentation
 ```
 
+## Important note on Imports
+All imports must be prefixed with "tellescope" in order to work with Canvas' sandboxing. E.g.
+use ```from tellescope.utilities.tellescope_api import TellescopeAPI``` instead of  ```from utilities.tellescope_api import TellescopeAPI```
+
 ## Reference Docs
 
 Refer to the following documents whenever creating a new protocol

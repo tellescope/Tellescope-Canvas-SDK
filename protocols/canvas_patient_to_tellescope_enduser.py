@@ -11,8 +11,7 @@ from canvas_sdk.events import EventType
 from canvas_sdk.protocols import BaseProtocol
 from logger import log
 
-from utilities.tellescope_api import TellescopeAPI
-
+from tellescope.utilities.tellescope_api import TellescopeAPI
 
 class Protocol(BaseProtocol):
     """
