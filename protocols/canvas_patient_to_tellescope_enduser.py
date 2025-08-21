@@ -26,7 +26,12 @@ class Protocol(BaseProtocol):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.tellescope_api = TellescopeAPI()
+
+        # 1. Validate secrets
+        if not self.secrets.get("TELLESCOPE_API_KEY"):
+            return []
+
+        self.tellescope_api = TellescopeAPI(self.secrets.get("TELLESCOPE_API_KEY"), self.secrets.get("TELLESCOPE_API_URL"))
 
     def compute(self) -> list[Effect]:
         """
@@ -38,31 +43,16 @@ class Protocol(BaseProtocol):
             patient = self.event.target.instance
             
             if not patient:
-                log.error("No patient instance found in event", extra={
-                    "protocol": "canvas_patient_to_tellescope_enduser",
-                    "event_type": "PATIENT_CREATED",
-                    "error_category": "missing_patient_instance"
-                })
+                log.error("No patient instance found in event")
                 return [self._create_error_effect("Patient instance not available", "missing_patient_instance")]
 
             patient_id = patient.id
-            log.info(f"Processing patient creation for Canvas patient ID: {patient_id}", extra={
-                "protocol": "canvas_patient_to_tellescope_enduser",
-                "canvas_patient_id": patient_id,
-                "event_type": "PATIENT_CREATED",
-                "step": "start_processing"
-            })
+            log.info(f"Processing patient creation for Canvas patient ID: {patient_id}")
 
             # Check if enduser already exists in Tellescope (avoid duplicates)
             existing_enduser = self._find_existing_enduser(patient_id)
             if existing_enduser:
-                log.info(f"Enduser already exists in Tellescope with ID: {existing_enduser['id']}", extra={
-                    "protocol": "canvas_patient_to_tellescope_enduser",
-                    "canvas_patient_id": patient_id,
-                    "tellescope_enduser_id": existing_enduser['id'],
-                    "step": "duplicate_detected",
-                    "action": "skipped_creation"
-                })
+                log.info(f"Enduser already exists in Tellescope with ID: {existing_enduser['id']}")
                 return [self._create_success_effect(
                     f"Enduser already exists in Tellescope",
                     existing_enduser['id'],
@@ -72,23 +62,12 @@ class Protocol(BaseProtocol):
 
             # Map Canvas patient data to Tellescope enduser format
             enduser_data = self._map_patient_to_enduser(patient)
-            log.debug(f"Mapped patient data for Canvas ID {patient_id}", extra={
-                "protocol": "canvas_patient_to_tellescope_enduser",
-                "canvas_patient_id": patient_id,
-                "mapped_fields_count": len(enduser_data),
-                "step": "data_mapping_complete"
-            })
+            log.debug(f"Mapped patient data for Canvas ID {patient_id}")
             
             # Create enduser in Tellescope
             created_enduser = self.tellescope_api.create("enduser", enduser_data)
             
-            log.info(f"Successfully created Tellescope enduser: {created_enduser['id']} for Canvas patient: {patient_id}", extra={
-                "protocol": "canvas_patient_to_tellescope_enduser",
-                "canvas_patient_id": patient_id,
-                "tellescope_enduser_id": created_enduser['id'],
-                "step": "enduser_created",
-                "action": "successful_creation"
-            })
+            log.info(f"Successfully created Tellescope enduser: {created_enduser['id']} for Canvas patient: {patient_id}")
             
             return [self._create_success_effect(
                 "Successfully created Tellescope enduser",
@@ -99,40 +78,15 @@ class Protocol(BaseProtocol):
 
         except ValueError as e:
             # API validation errors (400 responses)
-            log.error(f"Validation error creating Tellescope enduser for patient {patient_id}: {str(e)}", extra={
-                "protocol": "canvas_patient_to_tellescope_enduser",
-                "canvas_patient_id": patient_id,
-                "error_category": "validation_error",
-                "step": "api_request_failed"
-            })
+            log.error(f"Validation error creating Tellescope enduser for patient {patient_id}: {str(e)}")
             return [self._create_error_effect(f"Data validation failed: {str(e)}", "validation_error")]
-        except PermissionError as e:
-            # Authentication errors (401 responses)
-            log.error(f"Authentication error creating Tellescope enduser for patient {patient_id}: {str(e)}", extra={
-                "protocol": "canvas_patient_to_tellescope_enduser",
-                "canvas_patient_id": patient_id,
-                "error_category": "authentication_error",
-                "step": "api_request_failed"
-            })
-            return [self._create_error_effect(f"Authentication failed: {str(e)}", "authentication_error")]
         except ConnectionError as e:
             # Network or rate limiting errors
-            log.error(f"Connection error creating Tellescope enduser for patient {patient_id}: {str(e)}", extra={
-                "protocol": "canvas_patient_to_tellescope_enduser",
-                "canvas_patient_id": patient_id,
-                "error_category": "connection_error",
-                "step": "api_request_failed"
-            })
+            log.error(f"Connection error creating Tellescope enduser for patient {patient_id}: {str(e)}")
             return [self._create_error_effect(f"Connection failed: {str(e)}", "connection_error")]
         except Exception as e:
             # Unexpected errors
-            log.error(f"Unexpected error creating Tellescope enduser for patient {patient_id}: {str(e)}", extra={
-                "protocol": "canvas_patient_to_tellescope_enduser",
-                "canvas_patient_id": patient_id,
-                "error_category": "unexpected_error",
-                "step": "unknown_failure",
-                "exception_type": type(e).__name__
-            })
+            log.error(f"Unexpected error creating Tellescope enduser for patient {patient_id}: {str(e)}")
             return [self._create_error_effect(f"Unexpected error: {str(e)}", "unexpected_error")]
 
     def _find_existing_enduser(self, canvas_patient_id: str) -> Optional[dict]:
@@ -148,37 +102,17 @@ class Protocol(BaseProtocol):
         try:
             # Use MongoDB filter to find enduser by Canvas external ID
             mongodb_filter = {"externalId": str(canvas_patient_id)}
-            log.debug(f"Checking for existing enduser with Canvas ID {canvas_patient_id}", extra={
-                "protocol": "canvas_patient_to_tellescope_enduser",
-                "canvas_patient_id": canvas_patient_id,
-                "step": "duplicate_check",
-                "mongodb_filter": mongodb_filter
-            })
+            log.debug(f"Checking for existing enduser with Canvas ID {canvas_patient_id}")
             result = self.tellescope_api.find_by("endusers", mongodb_filter)
             
             if result:
-                log.debug(f"Found existing enduser {result['id']} for Canvas patient {canvas_patient_id}", extra={
-                    "protocol": "canvas_patient_to_tellescope_enduser",
-                    "canvas_patient_id": canvas_patient_id,
-                    "tellescope_enduser_id": result['id'],
-                    "step": "duplicate_found"
-                })
+                log.debug(f"Found existing enduser {result['id']} for Canvas patient {canvas_patient_id}")
             else:
-                log.debug(f"No existing enduser found for Canvas patient {canvas_patient_id}", extra={
-                    "protocol": "canvas_patient_to_tellescope_enduser",
-                    "canvas_patient_id": canvas_patient_id,
-                    "step": "no_duplicate_found"
-                })
+                log.debug(f"No existing enduser found for Canvas patient {canvas_patient_id}")
             
             return result
         except Exception as e:
-            log.warning(f"Error checking for existing enduser: {str(e)}", extra={
-                "protocol": "canvas_patient_to_tellescope_enduser",
-                "canvas_patient_id": canvas_patient_id,
-                "error_category": "duplicate_check_failed",
-                "step": "duplicate_check",
-                "exception_type": type(e).__name__
-            })
+            log.warning(f"Error checking for existing enduser: {str(e)}")
             return None
 
     def _map_patient_to_enduser(self, patient) -> dict:
@@ -225,15 +159,7 @@ class Protocol(BaseProtocol):
             
             # Demographics
             "dateOfBirth": date_of_birth,
-            "gender": gender_mapping.get(getattr(patient, 'sex', None), 'Unknown'),
-            
-            # Metadata
-            "tags": ["canvas-patient", "auto-synced"],
-            "fields": {
-                "canvas_patient_id": str(patient.id),
-                "sync_timestamp": datetime.now().isoformat(),
-                "sync_source": "canvas_patient_creation_protocol"
-            }
+            "gender": gender_mapping.get(getattr(patient, 'sex', None), 'Unknown'),    
         }
 
         # Add additional Canvas-specific fields if available
