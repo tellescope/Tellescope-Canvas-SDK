@@ -214,7 +214,7 @@ class Protocol(BaseProtocol):
                 )
                 effects.append(effect)
                 
-                log.debug(f"Created PatientMetadata effect for field '{field_name}' = '{value_str}'")
+                log.info(f"Setting PatientMetadata for patient {patient_id}: {field_name} = '{value_str}'")
                 
             except Exception as e:
                 log.error(f"Error creating PatientMetadata effect for field '{field_name}': {str(e)}")
